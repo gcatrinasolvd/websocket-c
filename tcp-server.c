@@ -10,8 +10,6 @@ int main() {
     int server_fd, new_socket;    
     struct sockaddr_in address;   // Structure containing an internet address
     int addrlen = sizeof(address); // Size of the address structure (16 bytes)
-    //The size of the buffer is a standard of 1024 bytes (for simplicity and memory efficiency)
-    char buffer[1024] = {0};      // Buffer for storing incoming messages
 
     // Creating the socket with IPv4 (AF_INET) and the SOCK_STREAM is the TCP protocol 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -37,16 +35,23 @@ int main() {
         exit(EXIT_FAILURE);  
     }
 
-    // Accept a connection,the function accept returns a new file description that's we use a new socket for it
-    // We check < 0 because the accept functions returns -1 if there is any error
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-        perror("accept");   
-        exit(EXIT_FAILURE);  
-    }
+     while(1) { // Infinite loop for accepting connections
+         //The size of the buffer is a standard of 1024 bytes (for simplicity and memory efficiency)
+        char buffer[1024] = {0}; // Buffer for storing incoming messages
 
-    // Read message from client
-    read(new_socket, buffer, 1024);  // Read data into buffer from the new socket
-    printf("Message received: %s\n", buffer); 
+        // Accept a connection,the function accept returns a new file description that's we use a new socket for it
+        // We check < 0 because the accept functions returns -1 if there is any error
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+            perror("accept");   
+            exit(EXIT_FAILURE);  
+        }
+
+        // Read message from client
+        read(new_socket, buffer, 1024);  // Read data into buffer from the new socket
+        printf("Message received: %s\n", buffer); 
+
+        close(new_socket); // Close the client socket to optimize resources
+    }
 
     // Close the socket
     close(server_fd); // Close the listening socket
