@@ -4,17 +4,27 @@
 #include <unistd.h>       // Provides access to POSIX OS API
 #include <netinet/in.h>   // Contains constants and structures for internet domain addresses
 
-#define PORT 8080         // Defines the port number on which the server will listen
-
+#define PORT 80         // Default HTTP port 
 int main() {
     int server_fd, new_socket;    
     struct sockaddr_in address;   // Structure containing an internet address
     int addrlen = sizeof(address); // Size of the address structure (16 bytes)
+    int opt = 1;
+
+    char buffer[3000] = {0};
+    char *httpResponse = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 20\n\n<h1>Hello</h1>"; //Default response "Hello"
 
     // Creating the socket with IPv4 (AF_INET) and the SOCK_STREAM is the TCP protocol 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed"); 
         exit(EXIT_FAILURE);  
+    }
+
+    // Set socket options to allow reuse of local addresses and ports
+    // the opt is to enable options for the setsockopt that's why it is also set to 1
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR , &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
     }
     
     // Setting up the address structure
@@ -36,6 +46,8 @@ int main() {
     }
 
      while(1) { // Infinite loop for accepting connections
+        printf("====== Waiting for new connection ======\n");
+
          //The size of the buffer is a standard of 1024 bytes (for simplicity and memory efficiency)
         char buffer[1024] = {0}; // Buffer for storing incoming messages
 
@@ -49,6 +61,10 @@ int main() {
         // Read message from client
         read(new_socket, buffer, 1024);  // Read data into buffer from the new socket
         printf("Message received: %s\n", buffer); 
+
+        // Response to the socket with the httpResponse and we send the string lenght to make sure the response is send correctly
+        write(new_socket, httpResponse, strlen(httpResponse));
+        printf("Hello message sent\n");
 
         close(new_socket); // Close the client socket to optimize resources
     }
