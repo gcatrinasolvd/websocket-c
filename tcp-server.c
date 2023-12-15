@@ -46,10 +46,9 @@ int main() {
 
      while(1) { // Infinite loop for accepting connections
         char httpResponse[4096];
-         //The size of the buffer is a standard of 1024 bytes (for simplicity and memory efficiency)
-        char buffer[1024] = {0}; // Buffer for storing incoming messages
-
         printf("====== Waiting for new connection ======\n");
+        char buffer[3000] = {0}; 
+
         // Accept a connection,the function accept returns a new file description that's we use a new socket for it
         // We check < 0 because the accept functions returns -1 if there is any error
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
@@ -58,13 +57,31 @@ int main() {
         }
 
         // Read message from client
-        read(new_socket, buffer, 1024);  // Read data into buffer from the new socket
+        int bytesRead = read(new_socket, buffer, sizeof(buffer) - 1);  // Read data into buffer from the new socket
+        if (bytesRead < 0) {
+            perror("read");
+            close(new_socket);
+            continue;
+        }
 
-        // Parse the HTTP method and path from the request
-        char method[10], path[1024];
-        sscanf(buffer, "%s %s", method, path); // Using sscanf to read the method and path
+        // Null-terminate the buffer to make it a valid string
+        buffer[bytesRead] = '\0';
+
+        // Parse the HTTP method, path, and version from the request
+        char method[10], path[1024], httpVersion[9];
+        int sscanfResult = sscanf(buffer, "%s %s %s", method, path, httpVersion); // Using sscanf to read the method, path, and HTTP version
+        if (sscanfResult != 3) {
+            // Handle error or unsupported request format
+            printf("Failed to parse request. Only received %d tokens.\n", sscanfResult);
+            close(new_socket);
+            continue;
+    }
         printf("HTTP Method: %s\n", method);
         printf("HTTP Path: %s\n", path);
+
+        // Ensure that the HTTP method and path are null-terminated
+        method[sizeof(method) - 1] = '\0';
+        path[sizeof(path) - 1] = '\0';
 
         // Create the HTTP response with the path included in the body
         sprintf(httpResponse, 
